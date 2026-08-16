@@ -211,6 +211,8 @@
   .showcase-summary-list li { font-size: 12.5px; color: var(--ink); padding-left: 1.1rem; position: relative; }
   .showcase-summary-list li::before { content: '✓'; position: absolute; left: 0; color: var(--moss); font-weight: 500; }
   .showcase-example-toggle { text-align: center; margin-bottom: 1.5rem; }
+  .showcase-example-btn { padding: 15px 28px; min-width: min(100%, 360px); }
+  .showcase-example-note { max-width: 500px; margin: 0.8rem auto 0; font-size: 11.5px; line-height: 1.6; color: var(--mist); font-style: italic; }
   .full-report-wrap { margin-bottom: 1rem; }
   @media (max-width: 520px) { .showcase-two-col { grid-template-columns: 1fr; } .showcase-summary-list { grid-template-columns: 1fr; } }
 
@@ -494,7 +496,8 @@
     </div>
 
     <div class="showcase-example-toggle">
-      <button class="btn-back" id="btn-toggle-full-report" onclick="toggleFullReport()">Ver um exemplo completo do relatório →</button>
+      <button class="btn-primary showcase-example-btn" id="btn-toggle-full-report" onclick="toggleFullReport()">Ver exemplo completo do Relatório Premium →</button>
+      <div class="showcase-example-note">Exemplo ilustrativo: o relatório exibido usa um perfil escolhido apenas para demonstração e pode ser diferente do resultado identificado no seu teste.</div>
     </div>
 
     <div class="full-report-wrap" id="full-report-wrap" style="display:none">
@@ -719,22 +722,27 @@
       <div class="survey-options" id="opts-intencao_compra"></div>
     </div>
 
-    <!-- Nota: pergunta específica sobre faixa de preço / disposição a pagar poderá ser incluída em versão futura da pesquisa. -->
+    <div class="survey-card" id="price-question-card" style="display:none">
+      <div class="survey-q-label">Pergunta 11</div>
+      <div class="survey-q-text">Qual faixa de preço você consideraria adequada para adquirir o Relatório Premium personalizado?</div>
+      <div class="survey-options" id="opts-faixa_preco"></div>
+    </div>
 
     <div class="survey-nav">
       <button class="btn-next" id="btn-next-validation-paid" onclick="goToOpenQuestion()">Continuar →</button>
     </div>
   </div>
 
-  <!-- PERGUNTA ABERTA -->
+  <!-- COMENTÁRIOS FINAIS -->
   <div id="screen-open-question" class="screen">
     <div class="survey-intro">
-      <div class="badge">Última pergunta</div>
+      <div class="badge">Comentários finais</div>
       <h2>Sua opinião<br><em style="font-style:italic;color:var(--terra)">é bem-vinda</em></h2>
     </div>
     <div class="survey-card">
-      <div class="survey-q-text">O que faria esse relatório ser mais útil ou interessante para você?</div>
-      <textarea class="survey-textarea" id="open-question-input" placeholder="Resposta opcional…" oninput="survey.comentario_final=this.value"></textarea>
+      <div class="survey-q-text">Sugestões ou comentários</div>
+      <p style="font-size:13px;color:var(--mist);line-height:1.65;margin:-0.45rem 0 1rem">Se quiser, deixe uma sugestão, comentário ou observação sobre o teste ou o Relatório Premium.</p>
+      <textarea class="survey-textarea" id="open-question-input" placeholder="Escreva aqui, se desejar…" oninput="survey.comentario_final=this.value"></textarea>
       <div class="survey-optional-tag">Campo opcional</div>
     </div>
     <div class="survey-nav">
@@ -1343,6 +1351,7 @@ var survey = {
   apoio_comunicacao_profissional: null,
   informacoes_mais_uteis: [],
   intencao_compra: null,
+  faixa_preco: null,
   comentario_final: ''
 };
 
@@ -1351,8 +1360,9 @@ var SCALE_REPRESENTACAO = ["Não representa","Representa pouco","Representa parc
 var SCALE_NADA_MUITO_EMPARTE = ["Nada","Pouco","Em parte","Bastante","Muito"];
 var SCALE_SIM_EMPARTE_NAO = ["Sim","Em parte","Não"];
 var SCALE_NADA_MUITO = ["Nada","Pouco","Moderadamente","Bastante","Muito"];
-var SCALE_CLAREZA = ["Nada claro","Pouco claro","Razoavelmente claro","Bastante claro","Muito claro"];
+var SCALE_CLAREZA = ["Nada claro","Pouco claro","Razoavelmente claro","Claro","Muito claro"];
 var SCALE_COMPRA = ["Certamente não compraria","Provavelmente não compraria","Talvez comprasse, dependendo do preço","Provavelmente compraria","Certamente compraria"];
+var SCALE_PRECO = ["Até R$ 69","De R$ 70 a R$ 99","De R$ 100 a R$ 129","R$ 130 ou mais","Não sei / não consigo estimar neste momento"];
 var OPTIONS_INFOS_UTEIS = [
   "Explicação aprofundada do meu perfil",
   "Como diferentes características dos ambientes podem me afetar",
@@ -1399,6 +1409,7 @@ function selectSingle(containerId, key, el, value) {
   }
   el.classList.add('selected'); el.querySelector('.survey-dot').classList.add('selected');
   survey[key] = value;
+  if (key === 'intencao_compra') updatePriceQuestion();
   updateSurveyNavState();
 }
 
@@ -1424,11 +1435,32 @@ function toggleMulti(containerId, key, el, value) {
   else { arr.push(value); el.classList.add('selected'); el.querySelector('.survey-dot').classList.add('selected'); }
 }
 
+function isPriceRequired() {
+  return survey.intencao_compra === 'Talvez comprasse, dependendo do preço' ||
+         survey.intencao_compra === 'Provavelmente compraria' ||
+         survey.intencao_compra === 'Certamente compraria';
+}
+
+function updatePriceQuestion() {
+  var card = document.getElementById('price-question-card');
+  if (!card) return;
+  if (isPriceRequired()) {
+    card.style.display = 'block';
+    renderSingleSelect('opts-faixa_preco', SCALE_PRECO, 'faixa_preco');
+  } else {
+    card.style.display = 'none';
+    survey.faixa_preco = null;
+    var opts = document.getElementById('opts-faixa_preco');
+    if (opts) opts.innerHTML = '';
+  }
+}
+
 function updateSurveyNavState() {
   var freeBtn = document.getElementById('btn-next-validation-free');
   if (freeBtn) freeBtn.classList.toggle('ready', !!(survey.identificacao_resultado && survey.representacao_percepcao_ambientes && survey.compreensao_conforto_desconforto && survey.percepcao_nova));
   var paidBtn = document.getElementById('btn-next-validation-paid');
-  if (paidBtn) paidBtn.classList.toggle('ready', !!(survey.clareza_relatorio_premium && survey.valor_percebido_premium && survey.apoio_tomada_decisao && survey.apoio_comunicacao_profissional && survey.informacoes_mais_uteis.length > 0 && survey.intencao_compra));
+  var priceOk = !isPriceRequired() || !!survey.faixa_preco;
+  if (paidBtn) paidBtn.classList.toggle('ready', !!(survey.clareza_relatorio_premium && survey.valor_percebido_premium && survey.apoio_tomada_decisao && survey.apoio_comunicacao_profissional && survey.informacoes_mais_uteis.length > 0 && survey.intencao_compra && priceOk));
 }
 
 function goToValidationFree() {
@@ -1451,7 +1483,7 @@ function toggleFullReport() {
   var btn = document.getElementById('btn-toggle-full-report');
   var isOpen = wrap.style.display !== 'none';
   wrap.style.display = isOpen ? 'none' : 'block';
-  if (btn) btn.textContent = isOpen ? 'Ver um exemplo completo do relatório →' : 'Ocultar exemplo completo ↑';
+  if (btn) btn.textContent = isOpen ? 'Ver exemplo completo do Relatório Premium →' : 'Ocultar exemplo completo ↑';
   if (!isOpen) wrap.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -1462,12 +1494,13 @@ function goToValidationPaid() {
   renderSingleSelect('opts-apoio_comunicacao_profissional', SCALE_NADA_MUITO, 'apoio_comunicacao_profissional');
   renderMultiSelect('opts-informacoes_mais_uteis', OPTIONS_INFOS_UTEIS, 'informacoes_mais_uteis');
   renderSingleSelect('opts-intencao_compra', SCALE_COMPRA, 'intencao_compra');
+  updatePriceQuestion();
   updateSurveyNavState();
   show('screen-validation-paid');
 }
 
 function goToOpenQuestion() {
-  if (!(survey.clareza_relatorio_premium && survey.valor_percebido_premium && survey.apoio_tomada_decisao && survey.apoio_comunicacao_profissional && survey.informacoes_mais_uteis.length > 0 && survey.intencao_compra)) return;
+  if (!(survey.clareza_relatorio_premium && survey.valor_percebido_premium && survey.apoio_tomada_decisao && survey.apoio_comunicacao_profissional && survey.informacoes_mais_uteis.length > 0 && survey.intencao_compra && (!isPriceRequired() || survey.faixa_preco))) return;
   show('screen-open-question');
 }
 
@@ -1503,6 +1536,8 @@ function buildSheetsPayload() {
     apoio_comunicacao_profissional: survey.apoio_comunicacao_profissional,
     informacoes_mais_uteis: survey.informacoes_mais_uteis.join('; '),
     intencao_compra: survey.intencao_compra,
+    nome_participante: clientName,
+    faixa_preco: survey.faixa_preco || '',
     comentario_final: survey.comentario_final,
     respostasTeste15: ts.rawHTML || ''
   };
@@ -1733,6 +1768,7 @@ function restartTest() {
     apoio_comunicacao_profissional: null,
     informacoes_mais_uteis: [],
     intencao_compra: null,
+    faixa_preco: null,
     comentario_final: ''
   };
   var openQ = document.getElementById('open-question-input');
@@ -1742,7 +1778,9 @@ function restartTest() {
   var fullReportWrap = document.getElementById('full-report-wrap');
   if (fullReportWrap) fullReportWrap.style.display = 'none';
   var toggleBtn = document.getElementById('btn-toggle-full-report');
-  if (toggleBtn) toggleBtn.textContent = 'Ver um exemplo completo do relatório →';
+  if (toggleBtn) toggleBtn.textContent = 'Ver exemplo completo do Relatório Premium →';
+  var priceCard = document.getElementById('price-question-card');
+  if (priceCard) priceCard.style.display = 'none';
   show('screen-intro');
 }
 </script>
